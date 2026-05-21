@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Нейрожелі Симуляторы v4 | Full AI Text Analysis</title>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Roboto', sans-serif; }
+
+  body {
+    background: #0a0e1a;
+    color: #e0e6ff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(circle at 20% 30%, rgba(0, 255, 200, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(180, 0, 255, 0.08) 0%, transparent 50%),
+      linear-gradient(180deg, #0a0e1a 0%, #050811 100%);
+    z-index: -2;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+      linear-gradient(rgba(0, 255, 200, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 200, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .page {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    transform: scale(0.95);
+    overflow-y: auto;
+  }
+
+  .page.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: scale(1);
+  }
+
+  #page1 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 25px;
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+
+  @keyframes glowPulse {
+    0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 255, 200, 0.3)); }
+    50% { filter: drop-shadow(0 0 25px rgba(0, 255, 200, 0.6)); }
+  }
+
+  .header h1 {
+    font-size: 38px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #00ffc8, #00aaff, #b400ff);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .header p {
+    color: #8a95b8;
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+
+  .ai-status-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .ai-status {
+    padding: 5px 12px;
+    background: rgba(0, 255, 200, 0.1);
+    border: 1px solid rgba(0, 255, 200, 0.3);
+    border-radius: 15px;
+    font-size: 11px;
+    color: #00ffc8;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+  }
+
+  .ai-status .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #00ffc8;
+    margin-right: 6px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .ai-status.loading {
+    background: rgba(255, 170, 0, 0.1);
+    border-color: rgba(255, 170, 0, 0.3);
+    color: #ffaa00;
+  }
+  .ai-status.loading .dot { background: #ffaa00; }
+
+  .ai-status.error {
+    background: rgba(255, 80, 80, 0.1);
+    border-color: rgba(255, 80, 80, 0.3);
+    color: #ff8080;
+  }
+  .ai-status.error .dot { background: #ff5050; }
+
+  .ai-status.ready {
+    background: rgba(0, 255, 100, 0.1);
+    border-color: rgba(0, 255, 100, 0.4);
+    color: #00ff80;
+  }
+  .ai-status.ready .dot { background: #00ff80; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.3); }
+  }
+
+  .input-container {
+    display: flex;
+    gap: 25px;
+    margin-bottom: 25px;
+    max-width: 1100px;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .input-card {
+    flex: 1;
+    min-width: 380px;
+    max-width: 500px;
+    background: rgba(15, 22, 40, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 255, 200, 0.2);
+    border-radius: 20px;
+    padding: 25px;
+    transition: all 0.4s ease;
+  }
+
+  .input-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(0, 255, 200, 0.5);
+    box-shadow: 0 10px 40px rgba(0, 255, 200, 0.15);
+  }
+
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #00ffc8;
+    margin-bottom: 15px;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 255, 200, 0.1);
+    border-radius: 8px;
+    font-size: 16px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 180px;
+    background: rgba(5, 10, 20, 0.8);
+    border: 1px solid rgba(0, 255, 200, 0.2);
+    border-radius: 12px;
+    padding: 15px;
+    color: #e0e6ff;
+    font-size: 15px;
+    resize: vertical;
+    outline: none;
+    transition: all 0.3s ease;
+    font-family: 'Consolas', monospace;
+  }
+
+  textarea:focus {
+    border-color: #00ffc8;
+    box-shadow: 0 0 20px rgba(0, 255, 200, 0.2);
+  }
+
+  textarea::placeholder { color: #4a5578; }
+
+  .examples-row {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .example-btn {
+    padding: 6px 12px;
+    background: rgba(0, 170, 255, 0.1);
+    border: 1px solid rgba(0, 170, 255, 0.3);
+    color: #00aaff;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .example-btn:hover {
+    background: rgba(0, 170, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .upload-area {
+    width: 100%;
+    min-height: 180px;
+    border: 2px dashed rgba(0, 255, 200, 0.3);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(5, 10, 20, 0.5);
+    overflow: hidden;
+  }
+
+  .upload-area:hover, .upload-area.dragover {
+    border-color: #00ffc8;
+    background: rgba(0, 255, 200, 0.05);
+    transform: scale(1.02);
+  }
+
+  .upload-area .icon { font-size: 50px; margin-bottom: 10px; opacity: 0.6; }
+  .upload-area .text { color: #8a95b8; font-size: 14px; text-align: center; padding: 0 20px; }
+  .upload-area .file-name { color: #00ffc8; font-size: 13px; margin-top: 10px; word-break: break-all; }
+  .upload-area img { max-width: 100%; max-height: 160px; border-radius: 8px; margin-top: 5px; }
+
+  #fileInput { display: none; }
+
+  .start-btn {
+    position: relative;
+    padding: 16px 50px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #0a0e1a;
+    background: linear-gradient(90deg, #00ffc8, #00aaff);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 30px rgba(0, 255, 200, 0.4);
+    text-transform: uppercase;
+  }
+
+  .start-btn::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .start-btn:hover:not(:disabled) {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 10px 40px rgba(0, 255, 200, 0.6);
+  }
+
+  .start-btn:hover:not(:disabled)::before {
+    width: 300px;
+    height: 300px;
+  }
+
+  .start-btn span { position: relative; z-index: 1; }
+
+  #page2 { background: #050811; }
+
+  #neuralCanvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .top-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 18px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(5, 8, 17, 0.9), transparent);
+    z-index: 10;
+  }
+
+  .top-bar .title {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(90deg, #00ffc8, #b400ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 2px;
+  }
+
+  .top-bar .layer-labels {
+    display: flex;
+    gap: 35px;
+    font-size: 11px;
+    color: #8a95b8;
+    letter-spacing: 2px;
+  }
+
+  .stats-panel {
+    position: absolute;
+    top: 75px;
+    right: 25px;
+    width: 270px;
+    background: rgba(15, 22, 40, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 255, 200, 0.2);
+    border-radius: 15px;
+    padding: 18px;
+    z-index: 10;
+  }
+
+  .stats-panel h3 {
+    font-size: 12px;
+    color: #00ffc8;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .stat-row .label { color: #8a95b8; }
+  .stat-row .value { color: #00ffc8; font-weight: 600; font-family: 'Consolas', monospace; }
+
+  .loss-chart-container {
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 255, 200, 0.15);
+  }
+
+  .loss-chart-container .chart-title {
+    font-size: 11px;
+    color: #8a95b8;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  #lossChart {
+    width: 100%;
+    height: 90px;
+    background: rgba(5, 8, 17, 0.6);
+    border-radius: 8px;
+  }
+
+  .input-display {
+    position: absolute;
+    top: 75px;
+    left: 25px;
+    width: 280px;
+    background: rgba(15, 22, 40, 0.85);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(180, 0, 255, 0.2);
+    border-radius: 15px;
+    padding: 18px;
+    z-index: 10;
+    max-height: 400px;
+    overflow: hidden;
+  }
+
+  .input-display h3 {
+    font-size: 12px;
+    color: #b400ff;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .input-display .content {
+    font-size: 12px;
+    color: #c0c8e0;
+    max-height: 300px;
+    overflow-y: auto;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+
+  .input-display img { max-width: 100%; border-radius: 8px; }
+
+  .analysis-panel {
+    position: absolute;
+    bottom: 25px;
+    left: 25px;
+    width: 360px;
+    background: rgba(15, 22, 40, 0.92);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 170, 255, 0.3);
+    border-radius: 15px;
+    padding: 18px;
+    z-index: 10;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .analysis-panel.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .analysis-panel h3 {
+    font-size: 12px;
+    color: #00aaff;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .analysis-section {
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 170, 255, 0.1);
+  }
+  .analysis-section:last-child { border-bottom: none; margin-bottom: 0; }
+
+  .analysis-section .section-title {
+    font-size: 11px;
+    color: #8a95b8;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .analysis-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .analysis-item .name { color: #c0c8e0; }
+  .analysis-item .val {
+    color: #00ffc8;
+    font-family: 'Consolas', monospace;
+    font-weight: 600;
+  }
+
+  .mini-bar {
+    height: 4px;
+    background: rgba(0, 255, 200, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+
+  .mini-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ffc8, #00aaff);
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  .mini-bar-fill.positive {
+    background: linear-gradient(90deg, #00ff80, #00ffc8);
+    box-shadow: 0 0 8px rgba(0, 255, 128, 0.5);
+  }
+  .mini-bar-fill.negative {
+    background: linear-gradient(90deg, #ff5050, #ff8080);
+    box-shadow: 0 0 8px rgba(255, 80, 80, 0.5);
+  }
+  .mini-bar-fill.neutral {
+    background: linear-gradient(90deg, #888aaa, #c0c8e0);
+  }
+
+  .keyword-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    background: rgba(180, 0, 255, 0.15);
+    border: 1px solid rgba(180, 0, 255, 0.3);
+    color: #d080ff;
+    border-radius: 10px;
+    font-size: 11px;
+    margin: 3px 3px 0 0;
+  }
+
+  .loading-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(5, 8, 17, 0.95);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+
+  .loading-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .loading-spinner {
+    width: 60px;
+    height: 60px;
+    border: 3px solid rgba(0, 255, 200, 0.2);
+    border-top-color: #00ffc8;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    color: #00ffc8;
+    font-size: 14px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .loading-detail {
+    color: #8a95b8;
+    font-size: 12px;
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.6;
+  }
+
+  .result-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: rgba(10, 14, 26, 0.95);
+    backdrop-filter: blur(20px);
+    border: 2px solid #00ffc8;
+    border-radius: 25px;
+    padding: 32px 45px;
+    text-align: center;
+    z-index: 100;
+    opacity: 0;
+    transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow:
+      0 0 60px rgba(0, 255, 200, 0.5),
+      inset 0 0 40px rgba(0, 255, 200, 0.05);
+    min-width: 450px;
+    max-width: 600px;
+  }
+
+  .result-modal.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+
+  .result-modal .result-label {
+    font-size: 12px;
+    color: #00ffc8;
+    letter-spacing: 4px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .result-modal .result-text {
+    font-size: 30px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #00ffc8, #00aaff, #b400ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    line-height: 1.2;
+    text-transform: capitalize;
+  }
+
+  .result-modal .result-detail {
+    font-size: 13px;
+    color: #c0c8e0;
+    margin-bottom: 18px;
+    line-height: 1.6;
+  }
+
+  .result-modal .confidence-bar {
+    height: 8px;
+    background: rgba(0, 255, 200, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+
+  .result-modal .confidence-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ffc8, #00aaff);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 1.5s ease 0.5s;
+    box-shadow: 0 0 15px rgba(0, 255, 200, 0.6);
+  }
+
+  .reset-btn {
+    padding: 12px 35px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #00ffc8;
+    background: transparent;
+    border: 2px solid #00ffc8;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+  }
+
+  .reset-btn:hover {
+    background: #00ffc8;
+    color: #0a0e1a;
+    box-shadow: 0 0 30px rgba(0, 255, 200, 0.5);
+  }
+
+  @media (max-width: 768px) {
+    .header h1 { font-size: 24px; }
+    .input-container { flex-direction: column; }
+    .input-card { min-width: 100%; }
+    .stats-panel, .input-display, .analysis-panel { width: 200px; padding: 12px; }
+    .result-modal { min-width: 300px; padding: 25px 20px; }
+    .result-modal .result-text { font-size: 22px; }
+  }
+
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .input-card { animation: fadeInUp 0.6s ease backwards; }
+  .input-card:nth-child(1) { animation-delay: 0.1s; }
+  .input-card:nth-child(2) { animation-delay: 0.2s; }
+  .start-btn { animation: fadeInUp 0.6s ease 0.4s backwards; }
+  .header { animation: fadeInUp 0.6s ease backwards; }
+</style>
+</head>
+<body>
+
+<div id="page1" class="page active">
+  <div class="header">
+    <h1>⚡ НЕЙРОЖЕЛІ СИМУЛЯТОРЫ v4</h1>
+    <p>Толық AI талдау: эмоция • тақырып • тіл • кілт сөздер</p>
+    <div class="ai-status-row">
+      <div class="ai-status ready" id="localStatus">
+        <span class="dot"></span>
+        <span>🌐 Жергілікті AI: дайын</span>
+      </div>
+      <div class="ai-status loading" id="visionStatus">
+        <span class="dot"></span>
+        <span id="visionStatusText">🖼️ Vision AI: жүктелуде...</span>
+      </div>
+      <div class="ai-status loading" id="textStatus">
+        <span class="dot"></span>
+        <span id="textStatusText">🧠 Text AI: жүктелуде...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-container">
+    <div class="input-card">
+      <div class="card-title">
+        <div class="card-icon">📝</div>
+        <span>МӘТІН ЕНГІЗУ (TOLYK TALDAU)</span>
+      </div>
+      <textarea id="textInput" placeholder="Мәтінді осы жерге жазыңыз...&#10;AI эмоция, тақырып, тіл және кілт сөздерді табады"></textarea>
+      <div class="examples-row">
+        <button class="example-btn" data-text="Мен бүгін өте бақыттымын! Жаңа жұмыс таптым, болашаққа қуанышпен қараймын.">😊 Бақытты</button>
+        <button class="example-btn" data-text="Команда матчта жеңіліп қалды. Футболшылар нашар ойнады, жанкүйерлер ренжіді.">⚽ Спорт</button>
+        <button class="example-btn" data-text="Жаңа iPhone шығарылды. Процессор өте жылдам, камерасы керемет. Технологиялар тез дамып келеді.">📱 Технология</button>
+        <button class="example-btn" data-text="Президент жаңа заң қабылдады. Парламент дауыс беріп, үкімет реформалар бастайды.">🏛️ Саясат</button>
+        <button class="example-btn" data-text="Я очень устал сегодня. Работа была тяжелая, чувствую себя плохо.">🇷🇺 Орысша</button>
+        <button class="example-btn" data-text="The weather is beautiful today. I love spending time in nature with my family.">🇬🇧 English</button>
+      </div>
+    </div>
+
+    <div class="input-card">
+      <div class="card-title">
+        <div class="card-icon">🖼️</div>
+        <span>СУРЕТ ЖҮКТЕУ</span>
+      </div>
+      <div class="upload-area" id="uploadArea">
+        <div class="icon">📤</div>
+        <div class="text">Суретті осы жерге апарыңыз<br>немесе таңдау үшін басыңыз<br><small style="opacity:0.6">AI 1000+ объектіні таниды</small></div>
+        <div class="file-name" id="fileName"></div>
+        <input type="file" id="fileInput" accept="image/*">
+      </div>
+    </div>
+  </div>
+
+  <button class="start-btn" id="startBtn">
+    <span>🚀 НЕЙРОЖЕЛІНІ ОҚЫТУДЫ БАСТАУ</span>
+  </button>
+</div>
+
+<div id="page2" class="page">
+  <canvas id="neuralCanvas"></canvas>
+
+  <div class="top-bar">
+    <div class="title">⚡ NEURAL NETWORK TRAINING</div>
+    <div class="layer-labels">
+      <span>◀ INPUT LAYER</span>
+      <span>HIDDEN LAYERS</span>
+      <span>OUTPUT LAYER ▶</span>
+    </div>
+  </div>
+
+  <div class="input-display">
+    <h3>📥 КІРІС ДЕРЕКТЕРІ</h3>
+    <div class="content" id="inputDisplay"></div>
+  </div>
+
+  <div class="stats-panel">
+    <h3>📊 ОҚЫТУ СТАТИСТИКАСЫ</h3>
+    <div class="stat-row"><span class="label">Epoch / Қадам:</span><span class="value" id="epochValue">0</span></div>
+    <div class="stat-row"><span class="label">Loss (Қателік):</span><span class="value" id="lossValue">0.000</span></div>
+    <div class="stat-row"><span class="label">Accuracy:</span><span class="value" id="accuracyValue">0.0%</span></div>
+    <div class="stat-row"><span class="label">Learning Rate:</span><span class="value" id="lrValue">0.001</span></div>
+    <div class="stat-row"><span class="label">Активті нейрондар:</span><span class="value" id="neuronsValue">0</span></div>
+
+    <div class="loss-chart-container">
+      <div class="chart-title">📉 LOSS CURVE</div>
+      <canvas id="lossChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Толық талдау панелі -->
+  <div class="analysis-panel" id="analysisPanel">
+    <h3>🔬 ТОЛЫҚ ТАЛДАУ</h3>
+    <div id="analysisContent"></div>
+  </div>
+
+  <div class="result-modal" id="resultModal">
+    <div class="result-label">✓ ТАЛДАУ АЯҚТАЛДЫ</div>
+    <div class="result-text" id="resultText">НӘТИЖЕ</div>
+    <div class="result-detail" id="resultDetail">Мәлімет толық талданды</div>
+    <div class="confidence-bar"><div class="confidence-fill" id="confidenceFill"></div></div>
+    <button class="reset-btn" id="resetBtn">🔄 Қайтадан бастау</button>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text" id="loadingText">AI ТАЛДАУДА...</div>
+  <div class="loading-detail" id="loadingDetail"></div>
+</div>
+
+<script>
+/* ============================================
+   v4 — ТОЛЫҚ AI МӘТІН + СУРЕТ ТАЛДАУ
+   ============================================ */
+
+// ---------- CDN-дер ----------
+const CDN_TF = [
+  'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js',
+  'https://unpkg.com/@tensorflow/tfjs@4.10.0/dist/tf.min.js'
+];
+const CDN_MOBILENET = [
+  'https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js',
+  'https://unpkg.com/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js'
+];
+const CDN_USE = [ // Universal Sentence Encoder - мәтін AI
+  'https://cdn.jsdelivr.net/npm/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js',
+  'https://unpkg.com/@tensorflow-models/universal-sentence-encoder@1.3.3/dist/universal-sentence-encoder.min.js'
+];
+
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = url;
+    script.onload = () => resolve(url);
+    script.onerror = () => reject(new Error('Failed: ' + url));
+    document.head.appendChild(script);
+  });
+}
+
+async function loadFromAny(urls) {
+  for (const url of urls) {
+    try {
+      await loadScript(url);
+      return true;
+    } catch (e) { continue; }
+  }
+  return false;
+}
+
+/* ============================================
+   ЖЕРГІЛІКТІ AI АЛГОРИТМІ
+   (Кеңейтілген сөздіктер базасы)
+   ============================================ */
+
+// Эмоция сөздіктері - қазақ, орыс, ағылшын
+const SENTIMENT_LEXICON = {
+  positive: {
+    kk: ['жақсы', 'керемет', 'тамаша', 'сүйікті', 'қуанышты', 'бақытты', 'махаббат', 'сүйеміз', 'сүйемін',
+         'қуан', 'күледі', 'күлкі', 'жеңіс', 'жеңді', 'мақтан', 'сәттілік', 'сәтті', 'таңдаулы',
+         'ұнайды', 'ұнатамын', 'дұрыс', 'ұнамды', 'әдемі', 'сүйкімді', 'жарқын', 'тыныш', 'ризамын',
+         'рахмет', 'сау', 'жылы', 'көңілді', 'қызықты', 'жетістік', 'жаңалық', 'мерекелі', 'жақсылық',
+         'сүйкімді', 'жайлы', 'жайдары', 'жұмсақ', 'байсалды', 'мейірімді', 'қайырымды', 'игі', 'игілік'],
+    ru: ['хорошо', 'отлично', 'прекрасно', 'замечательно', 'счастлив', 'радость', 'люблю', 'нравится',
+         'хороший', 'отличный', 'успех', 'победа', 'весело', 'смех', 'благо', 'добро', 'красиво',
+         'превосходно', 'великолепно', 'спасибо', 'благодарю', 'удача', 'позитив', 'улыбка', 'класс',
+         'круто', 'супер', 'обожаю', 'мило', 'приятно', 'тёплый', 'светлый', 'радостный'],
+    en: ['good', 'great', 'excellent', 'wonderful', 'amazing', 'happy', 'love', 'beautiful', 'awesome',
+         'nice', 'perfect', 'best', 'fantastic', 'brilliant', 'success', 'win', 'enjoy', 'pleasant',
+         'positive', 'cheerful', 'delightful', 'joy', 'smile', 'thanks', 'thank', 'glad', 'pleased',
+         'fabulous', 'incredible', 'outstanding', 'superb', 'lovely', 'cool', 'sweet']
+  },
+  negative: {
+    kk: ['жаман', 'қайғы', 'қайғырамын', 'ауру', 'науқас', 'өкінішті', 'жек', 'жек көрем', 'нашар',
+         'қателік', 'қате', 'қорқынышты', 'қорқам', 'ұят', 'ұятты', 'мұңды', 'мұңайамын', 'жылау',
+         'жылады', 'жек көру', 'жек көремін', 'жеңілдік', 'жеңіліс', 'жеңілді', 'азап', 'азапты',
+         'қиын', 'қиындық', 'дос болмау', 'жау', 'ыза', 'ызалы', 'ашу', 'ашулы', 'қапа', 'қапамын',
+         'күйзеліс', 'қайғылы', 'ауыр', 'жабырқау', 'қаражүрек', 'опасыз', 'жалған', 'өтірік', 'алдау',
+         'жалғыз', 'жалғыздық', 'кінә', 'мазасыз', 'болмашы', 'көңілсіз', 'мұңлы', 'қайғыру', 'жек',
+         'ренжу', 'ренжіді', 'налу', 'ауыртпалық', 'қасірет', 'қорлық', 'жек көрушілік'],
+    ru: ['плохо', 'ужасно', 'грустно', 'печаль', 'больно', 'ненавижу', 'не нравится', 'хуже', 'плохой',
+         'ужасный', 'страшно', 'страх', 'злой', 'злость', 'обида', 'обидно', 'разочарование',
+         'плакать', 'устал', 'устала', 'болезнь', 'болеть', 'тяжело', 'тяжёлый', 'проблема', 'беда',
+         'кошмар', 'отвратительно', 'противно', 'неудача', 'провал', 'поражение', 'смерть', 'умер',
+         'грусть', 'депрессия', 'тревога', 'паника', 'боль', 'страдание', 'мука', 'тоска', 'злоба'],
+    en: ['bad', 'terrible', 'awful', 'horrible', 'sad', 'hate', 'angry', 'angry', 'worst', 'poor',
+         'hurt', 'pain', 'fear', 'scared', 'cry', 'crying', 'tired', 'sick', 'ill', 'difficult',
+         'problem', 'trouble', 'fail', 'failure', 'loss', 'lose', 'died', 'death', 'sorrow', 'misery',
+         'depression', 'anxiety', 'stress', 'suffer', 'suffering', 'disgusting', 'nasty', 'evil',
+         'cruel', 'mean', 'rude', 'annoying', 'frustrated', 'disappointed', 'lonely', 'broken']
+  }
+};
+
+// Тақырып сөздіктері
+const TOPIC_LEXICON = {
+  'СПОРТ': {
+    kk: ['спорт', 'футбол', 'баскетбол', 'волейбол', 'теннис', 'бокс', 'күрес', 'ойын', 'команда',
+         'жанкүйер', 'ойыншы', 'тренер', 'жаттықтырушы', 'жеңіс', 'жеңіліс', 'матч', 'чемпион',
+         'олимпиада', 'турнир', 'жарыс', 'медаль', 'кубок', 'аренa', 'стадион', 'допта', 'допы'],
+    ru: ['спорт', 'футбол', 'баскетбол', 'волейбол', 'теннис', 'бокс', 'борьба', 'игра', 'команда',
+         'болельщик', 'игрок', 'тренер', 'победа', 'поражение', 'матч', 'чемпион', 'олимпиада',
+         'турнир', 'гонка', 'медаль', 'кубок', 'стадион', 'мяч'],
+    en: ['sport', 'football', 'soccer', 'basketball', 'tennis', 'boxing', 'game', 'team', 'player',
+         'coach', 'fan', 'match', 'champion', 'olympics', 'tournament', 'race', 'medal', 'cup',
+         'stadium', 'ball', 'goal', 'score', 'win', 'lose', 'playoff']
+  },
+  'ТЕХНОЛОГИЯ': {
+    kk: ['технология', 'компьютер', 'ноутбук', 'телефон', 'смартфон', 'процессор', 'жасанды интеллект',
+         'нейрожелі', 'программа', 'қосымша', 'сайт', 'интернет', 'желі', 'код', 'программалау',
+         'жасанды', 'интеллект', 'робот', 'iphone', 'android', 'apple', 'samsung', 'google',
+         'микрочип', 'чип', 'камера', 'экран', 'дисплей', 'батарея', 'зарядтау', 'wifi'],
+    ru: ['технология', 'компьютер', 'ноутбук', 'телефон', 'смартфон', 'процессор', 'искусственный интеллект',
+         'нейросеть', 'программа', 'приложение', 'сайт', 'интернет', 'сеть', 'код', 'программирование',
+         'робот', 'айфон', 'андроид', 'эппл', 'самсунг', 'гугл', 'камера', 'экран', 'дисплей',
+         'батарея', 'зарядка', 'вайфай', 'процессор', 'чип'],
+    en: ['technology', 'computer', 'laptop', 'phone', 'smartphone', 'processor', 'ai', 'artificial intelligence',
+         'neural network', 'software', 'app', 'website', 'internet', 'network', 'code', 'programming',
+         'robot', 'iphone', 'android', 'apple', 'samsung', 'google', 'camera', 'screen', 'display',
+         'battery', 'charging', 'wifi', 'chip', 'gpu', 'cpu', 'algorithm']
+  },
+  'САЯСАТ': {
+    kk: ['саясат', 'президент', 'үкімет', 'парламент', 'депутат', 'министр', 'заң', 'сайлау',
+         'дауыс беру', 'реформа', 'мемлекет', 'елбасы', 'мәжіліс', 'сенат', 'партия', 'оппозиция',
+         'халықаралық', 'дипломат', 'елшілік', 'келісім', 'санкция', 'отбасы', 'қоғам', 'азаматтар'],
+    ru: ['политика', 'президент', 'правительство', 'парламент', 'депутат', 'министр', 'закон',
+         'выборы', 'голосование', 'реформа', 'государство', 'партия', 'оппозиция', 'международный',
+         'дипломат', 'посольство', 'соглашение', 'санкции', 'общество', 'граждане', 'власть'],
+    en: ['politics', 'president', 'government', 'parliament', 'minister', 'law', 'election', 'voting',
+         'reform', 'state', 'party', 'opposition', 'international', 'diplomat', 'embassy', 'agreement',
+         'sanctions', 'society', 'citizens', 'power', 'democracy', 'congress', 'senator', 'policy']
+  },
+  'ҒЫЛЫМ': {
+    kk: ['ғылым', 'зерттеу', 'тәжірибе', 'эксперимент', 'физика', 'химия', 'биология', 'математика',
+         'теория', 'формула', 'ашылым', 'жаңалық', 'университет', 'ғалым', 'профессор', 'докторант',
+         'диссертация', 'лаборатория', 'космос', 'планета', 'жұлдыз', 'галактика', 'медицина',
+         'дәрі', 'вакцина', 'вирус', 'бактерия', 'ген', 'днк', 'эволюция'],
+    ru: ['наука', 'исследование', 'эксперимент', 'физика', 'химия', 'биология', 'математика',
+         'теория', 'формула', 'открытие', 'университет', 'ученый', 'профессор', 'диссертация',
+         'лаборатория', 'космос', 'планета', 'звезда', 'галактика', 'медицина', 'лекарство',
+         'вакцина', 'вирус', 'бактерия', 'ген', 'днк', 'эволюция'],
+    en: ['science', 'research', 'experiment', 'physics', 'chemistry', 'biology', 'mathematics',
+         'theory', 'formula', 'discovery', 'university', 'scientist', 'professor', 'dissertation',
+         'laboratory', 'space', 'planet', 'star', 'galaxy', 'medicine', 'drug', 'vaccine',
+         'virus', 'bacteria', 'gene', 'dna', 'evolution', 'study', 'analysis']
+  },
+  'ӨНЕР': {
+    kk: ['өнер', 'музыка', 'ән', 'әнші', 'композитор', 'фильм', 'кино', 'актер', 'актриса', 'режиссер',
+         'театр', 'спектакль', 'сурет', 'суретші', 'мүсін', 'кітап', 'жазушы', 'ақын', 'өлең', 'роман',
+         'поэзия', 'мәдениет', 'фестиваль', 'көрме', 'концерт', 'би', 'биші', 'хор', 'оркестр'],
+    ru: ['искусство', 'музыка', 'песня', 'певец', 'композитор', 'фильм', 'кино', 'актер', 'актриса',
+         'режиссер', 'театр', 'спектакль', 'картина', 'художник', 'скульптура', 'книга', 'писатель',
+         'поэт', 'стихи', 'роман', 'поэзия', 'культура', 'фестиваль', 'выставка', 'концерт', 'танец'],
+    en: ['art', 'music', 'song', 'singer', 'composer', 'film', 'movie', 'actor', 'actress', 'director',
+         'theater', 'painting', 'painter', 'sculpture', 'book', 'writer', 'poet', 'poetry', 'novel',
+         'culture', 'festival', 'exhibition', 'concert', 'dance', 'gallery', 'museum']
+  },
+  'ТАҒАМ': {
+    kk: ['тағам', 'ас', 'асхана', 'нан', 'ет', 'сорпа', 'көже', 'бесбармақ', 'плов', 'пицца',
+         'бургер', 'кофе', 'шай', 'су', 'сүт', 'қаймақ', 'май', 'тұз', 'қант', 'дәм', 'дәмді',
+         'жеу', 'ішу', 'аспаздық', 'рецепт', 'кафе', 'мейрамхана', 'ресторан', 'азық-түлік',
+         'жеміс', 'көкөніс', 'алма', 'банан', 'апельсин', 'қызанақ', 'қияр'],
+    ru: ['еда', 'пища', 'хлеб', 'мясо', 'суп', 'плов', 'пицца', 'бургер', 'кофе', 'чай', 'вода',
+         'молоко', 'сливки', 'масло', 'соль', 'сахар', 'вкус', 'вкусно', 'кушать', 'есть',
+         'кулинария', 'рецепт', 'кафе', 'ресторан', 'продукты', 'фрукт', 'овощ', 'яблоко',
+         'банан', 'апельсин', 'помидор', 'огурец'],
+    en: ['food', 'meal', 'bread', 'meat', 'soup', 'pizza', 'burger', 'coffee', 'tea', 'water',
+         'milk', 'cream', 'butter', 'salt', 'sugar', 'taste', 'tasty', 'delicious', 'eat',
+         'drink', 'cooking', 'recipe', 'cafe', 'restaurant', 'fruit', 'vegetable', 'apple',
+         'banana', 'orange', 'tomato', 'cucumber', 'pasta', 'rice']
+  },
+  'БІЛІМ': {
+    kk: ['білім', 'оқу', 'оқушы', 'мұғалім', 'ұстаз', 'студент', 'мектеп', 'университет', 'колледж',
+         'сабақ', 'дәріс', 'емтихан', 'тест', 'үй жұмысы', 'үй тапсырмасы', 'кітап', 'дәптер',
+         'оқулық', 'сынып', 'парта', 'тақта', 'қалам', 'қарындаш', 'білу', 'үйрену', 'білгір'],
+    ru: ['образование', 'учёба', 'ученик', 'учитель', 'студент', 'школа', 'университет', 'колледж',
+         'урок', 'лекция', 'экзамен', 'тест', 'домашнее задание', 'книга', 'тетрадь', 'учебник',
+         'класс', 'парта', 'доска', 'ручка', 'карандаш', 'знать', 'учить', 'выучить'],
+    en: ['education', 'study', 'student', 'teacher', 'school', 'university', 'college', 'lesson',
+         'lecture', 'exam', 'test', 'homework', 'book', 'notebook', 'textbook', 'class',
+         'classroom', 'pen', 'pencil', 'learn', 'know', 'knowledge', 'graduate', 'diploma']
+  },
+  'ТАБИҒАТ': {
+    kk: ['табиғат', 'ауа райы', 'күн', 'ай', 'жұлдыз', 'аспан', 'бұлт', 'жаңбыр', 'қар', 'мұз',
+         'жел', 'дауыл', 'тау', 'теңіз', 'мұхит', 'көл', 'өзен', 'орман', 'ағаш', 'гүл', 'шөп',
+         'жапырақ', 'тас', 'құм', 'шөл', 'жан-жануар', 'жабайы', 'мысық', 'ит', 'құс', 'балық'],
+    ru: ['природа', 'погода', 'солнце', 'луна', 'звезда', 'небо', 'облако', 'дождь', 'снег', 'лёд',
+         'ветер', 'буря', 'гора', 'море', 'океан', 'озеро', 'река', 'лес', 'дерево', 'цветок',
+         'трава', 'лист', 'камень', 'песок', 'пустыня', 'животное', 'дикий', 'кошка', 'собака'],
+    en: ['nature', 'weather', 'sun', 'moon', 'star', 'sky', 'cloud', 'rain', 'snow', 'ice', 'wind',
+         'storm', 'mountain', 'sea', 'ocean', 'lake', 'river', 'forest', 'tree', 'flower', 'grass',
+         'leaf', 'stone', 'sand', 'desert', 'animal', 'wild', 'cat', 'dog', 'bird', 'fish']
+  },
+  'ОТБАСЫ': {
+    kk: ['отбасы', 'ата', 'ана', 'әке', 'шеше', 'бала', 'балалар', 'ұл', 'қыз', 'аға', 'іні', 'апа',
+         'қарындас', 'сіңлі', 'нағашы', 'жиен', 'немере', 'келін', 'күйеу', 'күйеу бала', 'ата-ана',
+         'жұбай', 'жар', 'үй', 'отан', 'туыс', 'ағайын', 'дос', 'достар', 'махаббат'],
+    ru: ['семья', 'отец', 'мать', 'папа', 'мама', 'ребёнок', 'дети', 'сын', 'дочь', 'брат', 'сестра',
+         'дядя', 'тётя', 'дедушка', 'бабушка', 'внук', 'внучка', 'жена', 'муж', 'родители',
+         'супруг', 'дом', 'родственники', 'друг', 'друзья', 'любовь'],
+    en: ['family', 'father', 'mother', 'dad', 'mom', 'child', 'children', 'son', 'daughter',
+         'brother', 'sister', 'uncle', 'aunt', 'grandfather', 'grandmother', 'grandson', 'wife',
+         'husband', 'parents', 'spouse', 'home', 'relatives', 'friend', 'friends', 'love']
+  },
+  'ҚАРЖЫ/БИЗНЕС': {
+    kk: ['ақша', 'қаржы', 'банк', 'несие', 'кредит', 'депозит', 'инвестиция', 'бизнес', 'компания',
+         'кәсіпорын', 'кәсіпкер', 'сатушы', 'сатып алу', 'сату', 'нарық', 'базар', 'тауар',
+         'бағасы', 'құны', 'теңге', 'доллар', 'еуро', 'пайда', 'шығын', 'табыс', 'жалақы'],
+    ru: ['деньги', 'финансы', 'банк', 'кредит', 'депозит', 'инвестиция', 'бизнес', 'компания',
+         'предприятие', 'предприниматель', 'покупка', 'продажа', 'рынок', 'товар', 'цена',
+         'стоимость', 'тенге', 'доллар', 'евро', 'прибыль', 'расход', 'доход', 'зарплата'],
+    en: ['money', 'finance', 'bank', 'credit', 'deposit', 'investment', 'business', 'company',
+         'enterprise', 'entrepreneur', 'buy', 'sell', 'market', 'product', 'price', 'cost',
+         'dollar', 'euro', 'profit', 'income', 'salary', 'tax', 'budget', 'economy']
+  }
+};
+
+// Тіл анықтау - әріп жиілігі бойынша
+function detectLanguage(text) {
+  const lower = text.toLowerCase();
+  let kkScore = 0, ruScore = 0, enScore = 0, trScore = 0;
+
+  // Қазақ әріптері
+  const kkChars = ['ә', 'ғ', 'қ', 'ң', 'ө', 'ұ', 'ү', 'һ', 'і'];
+  // Орыс ерекше
+  const ruChars = ['ё', 'ы', 'ъ', 'э'];
+  // Түрік ерекше
+  const trChars = ['ı', 'ğ', 'ş', 'ç', 'ö', 'ü'];
+
+  for (const ch of lower) {
+    if (kkChars.includes(ch)) kkScore += 3;
+    if (ruChars.includes(ch)) ruScore += 3;
+    if (trChars.includes(ch) && !kkChars.includes(ch)) trScore += 2;
+    // Кирилица бойынша орысша
+    if (/[а-яё]/.test(ch)) ruScore += 0.3;
+    // Латиница бойынша ағылшын
+    if (/[a-z]/.test(ch)) enScore += 0.3;
+  }
+
+  // Сөздер бойынша қосымша
+  const kkWords = ['мен', 'сен', 'ол', 'біз', 'сіз', 'олар', 'бар', 'жоқ', 'үшін', 'ғой', 'екен', 'еді'];
+  const ruWords = ['я', 'ты', 'он', 'мы', 'вы', 'они', 'это', 'что', 'как', 'для', 'или', 'если'];
+  const enWords = ['the', 'is', 'are', 'was', 'were', 'have', 'has', 'with', 'for', 'this', 'that'];
+
+  const words = lower.split(/\s+/);
+  words.forEach(w => {
+    if (kkWords.includes(w)) kkScore += 5;
+    if (ruWords.includes(w)) ruScore += 5;
+    if (enWords.includes(w)) enScore += 5;
+  });
+
+  const total = kkScore + ruScore + enScore + trScore;
+  if (total === 0) return { lang: 'белгісіз', code: 'unknown', confidence: 0 };
+
+  const scores = { kk: kkScore, ru: ruScore, en: enScore, tr: trScore };
+  const winner = Object.keys(scores).reduce((a, b) => scores[a] > scores[b] ? a : b);
+  const langNames = {
+    kk: 'Қазақша', ru: 'Орысша', en: 'Ағылшынша', tr: 'Түрікше'
+  };
+
+  return {
+    lang: langNames[winner],
+    code: winner,
+    confidence: (scores[winner] / total * 100).toFixed(1)
+  };
+}
+
+// Эмоция талдауы
+function analyzeSentiment(text, langCode) {
+  const lower = text.toLowerCase();
+  const words = lower.split(/[\s,.\!?;:()"]+/).filter(w => w.length > 0);
+
+  let posScore = 0, negScore = 0;
+  const matched = { positive: [], negative: [] };
+
+  // Барлық тілдер үшін тексереміз (тіл анықталмаса)
+  const langs = langCode && SENTIMENT_LEXICON.positive[langCode]
+    ? [langCode]
+    : ['kk', 'ru', 'en'];
+
+  langs.forEach(lang => {
+    const posDict = SENTIMENT_LEXICON.positive[lang] || [];
+    const negDict = SENTIMENT_LEXICON.negative[lang] || [];
+
+    posDict.forEach(word => {
+      if (lower.includes(word)) {
+        posScore += 1;
+        if (!matched.positive.includes(word)) matched.positive.push(word);
+      }
+    });
+    negDict.forEach(word => {
+      if (lower.includes(word)) {
+        negScore += 1;
+        if (!matched.negative.includes(word)) matched.negative.push(word);
+      }
+    });
+  });
+
+  // Терістеу сөздерін есепке алу
+  const negators = ['не', 'емес', 'жоқ', 'болма', 'не', 'нет', 'без', 'not', 'no', 'never', "don't", "isn't"];
+  let negationFound = false;
+  negators.forEach(n => {
+    if (lower.includes(' ' + n + ' ') || lower.startsWith(n + ' ')) {
+      negationFound = true;
+    }
+  });
+
+  // Терістеу болса орынды ауыстырамыз
+  if (negationFound && Math.abs(posScore - negScore) <= 1) {
+    [posScore, negScore] = [negScore * 0.7, posScore * 0.7];
+  }
+
+  const total = posScore + negScore;
+  let label, code, confidence;
+
+  if (total === 0) {
+    label = 'Бейтарап';
+    code = 'neutral';
+    confidence = 70;
+  } else if (posScore > negScore * 1.3) {
+    label = 'Оң эмоция';
+    code = 'positive';
+    confidence = Math.min(95, 60 + (posScore - negScore) * 8);
+  } else if (negScore > posScore * 1.3) {
+    label = 'Теріс эмоция';
+    code = 'negative';
+    confidence = Math.min(95, 60 + (negScore - posScore) * 8);
+  } else {
+    label = 'Бейтарап / Аралас';
+    code = 'neutral';
+    confidence = 65;
+  }
+
+  return {
+    label, code,
+    confidence: parseFloat(confidence.toFixed(1)),
+    positiveScore: posScore,
+    negativeScore: negScore,
+    matched
+  };
+}
+
+// Тақырып талдауы
+function analyzeTopic(text, langCode) {
+  const lower = text.toLowerCase();
+  const topicScores = {};
+
+  Object.keys(TOPIC_LEXICON).forEach(topic => {
+    const dict = TOPIC_LEXICON[topic];
+    let score = 0;
+    const matched = [];
+
+    Object.values(dict).forEach(langDict => {
+      langDict.forEach(word => {
+        // Сөз бөлек тұрса
+        const regex = new RegExp('\\b' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+        if (regex.test(lower) || lower.includes(word)) {
+          score += 1;
+          if (!matched.includes(word)) matched.push(word);
+        }
+      });
+    });
+
+    if (score > 0) {
+      topicScores[topic] = { score, matched };
+    }
+  });
+
+  // Сорттаймыз
+  const sorted = Object.entries(topicScores)
+    .sort((a, b) => b[1].score - a[1].score)
+    .slice(0, 3);
+
+  if (sorted.length === 0) {
+    return {
+      main: 'Жалпы / Анықталмаған',
+      mainScore: 0,
+      all: []
+    };
+  }
+
+  const totalScore = sorted.reduce((sum, [_, data]) => sum + data.score, 0);
+
+  return {
+    main: sorted[0][0],
+    mainScore: sorted[0][1].score,
+    matched: sorted[0][1].matched,
+    all: sorted.map(([topic, data]) => ({
+      name: topic,
+      score: data.score,
+      percent: ((data.score / totalScore) * 100).toFixed(1)
+    }))
+  };
+}
+
+// Кілт сөздерді табу
+function extractKeywords(text) {
+  // Стоп-сөздер
+  const stopwords = new Set([
+    'мен', 'сен', 'ол', 'біз', 'сіз', 'олар', 'бұл', 'сол', 'осы', 'қай', 'не',
+    'үшін', 'және', 'немесе', 'бірақ', 'тек', 'ғана', 'та', 'те', 'да', 'де',
+    'я', 'ты', 'он', 'она', 'мы', 'вы', 'они', 'это', 'тот', 'этот', 'и', 'или',
+    'но', 'для', 'как', 'что', 'если', 'когда', 'где', 'кто',
+    'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has',
+    'do', 'does', 'will', 'would', 'and', 'or', 'but', 'for', 'with', 'this', 'that'
+  ]);
+
+  const words = text.toLowerCase()
+    .replace(/[.,!?;:()"]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 3 && !stopwords.has(w));
+
+  const freq = {};
+  words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+
+  return Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([word, count]) => ({ word, count }));
+}
+
+// Күрделілікті есептеу
+function analyzeComplexity(text) {
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const chars = text.length;
+  const avgWordLen = words.length > 0 ? (chars / words.length).toFixed(1) : 0;
+  const avgSentLen = sentences.length > 0 ? (words.length / sentences.length).toFixed(1) : 0;
+
+  let level = 'Қарапайым';
+  if (avgWordLen > 6 || avgSentLen > 15) level = 'Орташа';
+  if (avgWordLen > 7.5 || avgSentLen > 22) level = 'Күрделі';
+
+  return {
+    chars, words: words.length, sentences: sentences.length,
+    avgWordLen, avgSentLen, level
+  };
+}
+
+/* ============================================
+   КҮЙ
+   ============================================ */
+const state = {
+  inputType: null,
+  inputData: null,
+  inputImage: null,
+  textAnalysis: null,
+  training: false,
+  finalAnimation: false,
+  epoch: 0, loss: 1.0, accuracy: 0,
+  lossHistory: [],
+  layers: [], connections: [], particles: [], inputDots: [],
+  startTime: 0,
+  finalResult: null,
+  predictions: [],
+  mobilenetModel: null,
+  useModel: null, // Universal Sentence Encoder
+  visionReady: false,
+  textReady: false
+};
+
+const CONFIG = {
+  duration: 7000,
+  inputNeurons: 12,
+  hiddenNeurons: 18,
+  outputNeurons: 1,
+  particleSpeed: 0.012
+};
+
+// ---------- DOM ----------
+const page1 = document.getElementById('page1');
+const page2 = document.getElementById('page2');
+const textInput = document.getElementById('textInput');
+const fileInput = document.getElementById('fileInput');
+const uploadArea = document.getElementById('uploadArea');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const canvas = document.getElementById('neuralCanvas');
+const ctx = canvas.getContext('2d');
+const lossChartCanvas = document.getElementById('lossChart');
+const lossCtx = lossChartCanvas.getContext('2d');
+const resultModal = document.getElementById('resultModal');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingText = document.getElementById('loadingText');
+const loadingDetail = document.getElementById('loadingDetail');
+
+// ---------- AI ЖҮКТЕУ ----------
+async function loadAIModels() {
+  // 1. TensorFlow.js
+  const visionStatus = document.getElementById('visionStatus');
+  const textStatus = document.getElementById('textStatus');
+
+  document.getElementById('visionStatusText').textContent = '🖼️ TensorFlow.js жүктелуде...';
+
+  const tfLoaded = await loadFromAny(CDN_TF);
+  if (!tfLoaded) {
+    visionStatus.classList.remove('loading');
+    visionStatus.classList.add('error');
+    document.getElementById('visionStatusText').textContent = '🖼️ Vision AI: офлайн';
+    textStatus.classList.remove('loading');
+    textStatus.classList.add('error');
+    document.getElementById('textStatusText').textContent = '🧠 Text AI: офлайн';
+    console.warn('TensorFlow.js жүктелмеді');
+    return;
+  }
+
+  // 2. MobileNet (паралелльді)
+  loadFromAny(CDN_MOBILENET).then(async (ok) => {
+    if (ok) {
+      try {
+        document.getElementById('visionStatusText').textContent = '🖼️ MobileNet жүктелуде...';
+        state.mobilenetModel = await mobilenet.load({ version: 2, alpha: 1.0 });
+        state.visionReady = true;
+        visionStatus.classList.remove('loading');
+        visionStatus.classList.add('ready');
+        document.getElementById('visionStatusText').textContent = '🖼️ Vision AI: дайын';
+        console.log('✓ MobileNet дайын');
+      } catch (e) {
+        visionStatus.classList.remove('loading');
+        visionStatus.classList.add('error');
+        document.getElementById('visionStatusText').textContent = '🖼️ Vision AI: қате';
+        console.error('MobileNet қате:', e);
+      }
+    } else {
+      visionStatus.classList.remove('loading');
+      visionStatus.classList.add('error');
+      document.getElementById('visionStatusText').textContent = '🖼️ Vision AI: жүктелмеді';
+    }
+  });
+
+  // 3. Universal Sentence Encoder (мәтін AI)
+  loadFromAny(CDN_USE).then(async (ok) => {
+    if (ok) {
+      try {
+        document.getElementById('textStatusText').textContent = '🧠 USE моделі жүктелуде...';
+        state.useModel = await use.load();
+        state.textReady = true;
+        textStatus.classList.remove('loading');
+        textStatus.classList.add('ready');
+        document.getElementById('textStatusText').textContent = '🧠 Text AI: дайын (USE)';
+        console.log('✓ Universal Sentence Encoder дайын');
+      } catch (e) {
+        textStatus.classList.remove('loading');
+        textStatus.classList.add('error');
+        document.getElementById('textStatusText').textContent = '🧠 Text AI: жергілікті ғана';
+        console.warn('USE қате:', e);
+      }
+    } else {
+      textStatus.classList.remove('loading');
+      textStatus.classList.add('error');
+      document.getElementById('textStatusText').textContent = '🧠 Text AI: жергілікті ғана';
+    }
+  });
+}
+
+loadAIModels();
+
+// ---------- МЫСАЛДАР ----------
+document.querySelectorAll('.example-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    textInput.value = btn.dataset.text;
+    textInput.focus();
+  });
+});
+
+// ---------- ФАЙЛ ----------
+uploadArea.addEventListener('click', () => fileInput.click());
+uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) handleFile(file);
+});
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) handleFile(file);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    state.inputData = e.target.result;
+    state.inputType = 'image';
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { state.inputImage = img; };
+    img.src = e.target.result;
+    uploadArea.innerHTML = `<img src="${e.target.result}" alt="preview"><div class="file-name">✓ ${file.name}</div>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---------- ImageNet аударма (қысқа) ----------
+const IMG_TRANS = {
+  'cat': 'мысық', 'kitten': 'мысық күшігі', 'tabby': 'жолақты мысық', 'lynx': 'сілеусін',
+  'persian cat': 'парсы мысығы', 'siamese cat': 'сиам мысығы', 'egyptian cat': 'мысық', 'tiger cat': 'жолақты мысық',
+  'dog': 'ит', 'puppy': 'күшік', 'labrador': 'лабрадор', 'retriever': 'ретривер',
+  'german shepherd': 'неміс овчаркасы', 'husky': 'хаски', 'poodle': 'пудель',
+  'bulldog': 'бульдог', 'terrier': 'терьер', 'beagle': 'бигль', 'chihuahua': 'чихуахуа',
+  'horse': 'жылқы', 'cow': 'сиыр', 'sheep': 'қой', 'goat': 'ешкі',
+  'pig': 'шошқа', 'rabbit': 'қоян', 'hamster': 'хомяк',
+  'lion': 'арыстан', 'tiger': 'жолбарыс', 'leopard': 'қабылан',
+  'cheetah': 'гепард', 'wolf': 'қасқыр', 'fox': 'түлкі', 'bear': 'аю', 'panda': 'панда',
+  'elephant': 'піл', 'giraffe': 'керік', 'zebra': 'зебра',
+  'monkey': 'маймыл', 'gorilla': 'горилла', 'kangaroo': 'кенгуру', 'koala': 'коала',
+  'bird': 'құс', 'eagle': 'бүркіт', 'owl': 'үкі', 'parrot': 'тоты',
+  'chicken': 'тауық', 'duck': 'үйрек', 'peacock': 'тауыс', 'penguin': 'пингвин',
+  'fish': 'балық', 'shark': 'акула', 'goldfish': 'алтын балық',
+  'butterfly': 'көбелек', 'bee': 'ара', 'spider': 'өрмекші', 'snake': 'жылан',
+  'turtle': 'тасбақа', 'frog': 'бақа',
+  'pizza': 'пицца', 'burger': 'бургер', 'hamburger': 'гамбургер',
+  'cheeseburger': 'чизбургер', 'hot dog': 'хот-дог', 'sandwich': 'сэндвич',
+  'bread': 'нан', 'apple': 'алма', 'banana': 'банан', 'orange': 'апельсин',
+  'lemon': 'лимон', 'strawberry': 'құлпынай', 'pineapple': 'ананас',
+  'ice cream': 'балмұздақ', 'cake': 'торт',
+  'car': 'көлік', 'sports car': 'спорт көлігі', 'jeep': 'джип', 'pickup': 'пикап',
+  'truck': 'жүк көлігі', 'taxi': 'такси', 'bus': 'автобус',
+  'train': 'пойыз', 'airplane': 'ұшақ', 'helicopter': 'тікұшақ',
+  'ship': 'кеме', 'boat': 'қайық', 'bicycle': 'велосипед', 'motorcycle': 'мотоцикл',
+  'laptop': 'ноутбук', 'computer': 'компьютер', 'phone': 'телефон',
+  'camera': 'фотоаппарат', 'television': 'теледидар',
+  'clock': 'сағат', 'book': 'кітап', 'chair': 'орындық', 'table': 'үстел',
+  'guitar': 'гитара', 'piano': 'пианино', 'tree': 'ағаш', 'flower': 'гүл'
+};
+
+function transImg(label) {
+  const lower = label.toLowerCase().trim();
+  if (IMG_TRANS[lower]) return IMG_TRANS[lower];
+  for (const k in IMG_TRANS) if (lower.includes(k)) return IMG_TRANS[k];
+  const parts = lower.split(',').map(s => s.trim());
+  for (const p of parts) {
+    if (IMG_TRANS[p]) return IMG_TRANS[p];
+    for (const k in IMG_TRANS) if (p.includes(k)) return IMG_TRANS[k];
+  }
+  return label;
+}
+
+// ---------- БАСТАУ ----------
+startBtn.addEventListener('click', async () => {
+  const text = textInput.value.trim();
+
+  // Сурет
+  if (state.inputData && state.inputType === 'image') {
+    if (state.visionReady) {
+      loadingText.textContent = 'СУРЕТТІ AI ТАЛДАУДА...';
+      loadingDetail.textContent = 'MobileNet нейрожелі моделі суретті өңдеп жатыр';
+      loadingOverlay.classList.add('show');
+
+      try {
+        await waitForImage();
+        const predictions = await state.mobilenetModel.classify(state.inputImage, 5);
+        state.predictions = predictions.map(p => ({
+          labelEn: p.className,
+          labelKz: transImg(p.className),
+          probability: p.probability
+        }));
+        const top = state.predictions[0];
+        state.finalResult = {
+          label: top.labelKz.toUpperCase(),
+          detail: 'AI моделі осы объектіні таныды',
+          confidence: top.probability * 100
+        };
+        loadingOverlay.classList.remove('show');
+        proceedToVisualization();
+      } catch (err) {
+        loadingOverlay.classList.remove('show');
+        state.finalResult = { label: 'СУРЕТ ОБЪЕКТІСІ', detail: 'AI офлайн', confidence: 75 };
+        proceedToVisualization();
+      }
+    } else {
+      state.finalResult = { label: 'СУРЕТ', detail: 'Vision AI жүктелмеген — мәтін режимін қолданыңыз', confidence: 60 };
+      proceedToVisualization();
+    }
+    return;
+  }
+
+  // Мәтін немесе демо
+  if (!text) {
+    state.inputType = 'text';
+    state.inputData = 'DEMO режим: Жасанды интеллект, нейрожелі, машиналық оқыту — болашақтың технологиялары. Мен бұл тақырыпты жақсы көремін!';
+  } else {
+    state.inputType = 'text';
+    state.inputData = text;
+  }
+
+  loadingText.textContent = 'МӘТІН ТАЛДАНУДА...';
+  loadingDetail.textContent = 'Эмоция, тақырып, тіл және кілт сөздер анықталуда';
+  loadingOverlay.classList.add('show');
+
+  // Жергілікті талдау
+  await new Promise(r => setTimeout(r, 800)); // визуалды эффект үшін
+
+  const lang = detectLanguage(state.inputData);
+  const sentiment = analyzeSentiment(state.inputData, lang.code);
+  const topic = analyzeTopic(state.inputData, lang.code);
+  const keywords = extractKeywords(state.inputData);
+  const complexity = analyzeComplexity(state.inputData);
+
+  // Егер USE моделі дайын болса - қосымша embedding талдауы
+  let aiEmbedding = null;
+  if (state.textReady && state.useModel) {
+    try {
+      const embeddings = await state.useModel.embed([state.inputData]);
+      const data = await embeddings.array();
+      // Embedding векторының сипаттамасы
+      const vec = data[0];
+      const mean = vec.reduce((a, b) => a + b, 0) / vec.length;
+      const variance = vec.reduce((a, b) => a + (b - mean) ** 2, 0) / vec.length;
+      aiEmbedding = {
+        dimensions: vec.length,
+        magnitude: Math.sqrt(vec.reduce((a, b) => a + b * b, 0)).toFixed(3),
+        variance: variance.toFixed(4)
+      };
+      embeddings.dispose();
+      console.log('✓ USE embedding есептелді:', aiEmbedding);
+    } catch (e) {
+      console.warn('USE embedding қате:', e);
+    }
+  }
+
+  state.textAnalysis = { lang, sentiment, topic, keywords, complexity, aiEmbedding };
+
+  // Негізгі нәтиже
+  state.finalResult = {
+    label: topic.main === 'Жалпы / Анықталмаған'
+      ? sentiment.label.toUpperCase()
+      : `${topic.main} • ${sentiment.label.toUpperCase()}`,
+    detail: `Тіл: ${lang.lang} • ${complexity.words} сөз • ${complexity.sentences} сөйлем • ${complexity.level} деңгей`,
+    confidence: Math.max(sentiment.confidence, topic.mainScore > 0 ? 85 : 70)
+  };
+
+  loadingOverlay.classList.remove('show');
+  proceedToVisualization();
+});
+
+function waitForImage() {
+  return new Promise((resolve) => {
+    if (state.inputImage && state.inputImage.complete && state.inputImage.naturalWidth > 0) resolve();
+    else if (state.inputImage) state.inputImage.onload = () => resolve();
+    else {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => { state.inputImage = img; resolve(); };
+      img.src = state.inputData;
+    }
+  });
+}
+
+function proceedToVisualization() {
+  page1.classList.remove('active');
+  setTimeout(() => {
+    page2.classList.add('active');
+    initNeuralNetwork();
+    startTraining();
+  }, 600);
+}
+
+function switchToPage1() {
+  page2.classList.remove('active');
+  resultModal.classList.remove('show');
+  document.getElementById('analysisPanel').classList.remove('show');
+  setTimeout(() => {
+    page1.classList.add('active');
+    resetState();
+  }, 600);
+}
+
+resetBtn.addEventListener('click', switchToPage1);
+
+function resetState() {
+  state.training = false; state.finalAnimation = false;
+  state.epoch = 0; state.loss = 1.0; state.accuracy = 0;
+  state.lossHistory = []; state.layers = []; state.connections = [];
+  state.particles = []; state.inputDots = [];
+  state.finalResult = null; state.predictions = []; state.textAnalysis = null;
+  textInput.value = '';
+  state.inputData = null; state.inputImage = null;
+  uploadArea.innerHTML = `
+    <div class="icon">📤</div>
+    <div class="text">Суретті осы жерге апарыңыз<br>немесе таңдау үшін басыңыз<br><small style="opacity:0.6">AI 1000+ объектіні таниды</small></div>
+    <div class="file-name" id="fileName"></div>
+  `;
+  fileInput.value = '';
+  document.getElementById('confidenceFill').style.width = '0%';
+}
+
+// ---------- CANVAS ----------
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  lossChartCanvas.width = lossChartCanvas.offsetWidth;
+  lossChartCanvas.height = lossChartCanvas.offsetHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function initNeuralNetwork() {
+  resizeCanvas();
+  const W = canvas.width, H = canvas.height;
+  const marginLeft = W * 0.22, marginRight = W * 0.78;
+  const marginTop = H * 0.18, marginBottom = H * 0.82;
+
+  state.layers = []; state.connections = []; state.particles = [];
+
+  const layerConfigs = [
+    { count: CONFIG.inputNeurons, type: 'input' },
+    { count: CONFIG.hiddenNeurons, type: 'hidden' },
+    { count: CONFIG.hiddenNeurons, type: 'hidden' },
+    { count: CONFIG.outputNeurons, type: 'output' }
+  ];
+
+  const layerSpacing = (marginRight - marginLeft) / (layerConfigs.length - 1);
+
+  layerConfigs.forEach((cfg, layerIdx) => {
+    const x = marginLeft + layerIdx * layerSpacing;
+    const layer = [];
+    const ySpacing = (marginBottom - marginTop) / Math.max(cfg.count - 1, 1);
+    for (let i = 0; i < cfg.count; i++) {
+      const y = cfg.count === 1 ? (marginTop + marginBottom) / 2 : marginTop + i * ySpacing;
+      layer.push({
+        x, y, type: cfg.type, layer: layerIdx, idx: i,
+        activation: Math.random() * 0.3,
+        targetActivation: 0, pulse: 0,
+        weight1: (Math.random() * 2 - 1).toFixed(2),
+        weight2: (Math.random() * 2 - 1).toFixed(2),
+        showWeight: layerIdx > 0 && layerIdx < 3 && i % 3 === 0
+      });
+    }
+    state.layers.push(layer);
+  });
+
+  for (let l = 0; l < state.layers.length - 1; l++) {
+    state.layers[l].forEach((from) => {
+      state.layers[l + 1].forEach((to) => {
+        state.connections.push({
+          from, to, weight: Math.random() * 2 - 1,
+          activity: Math.random(), isImportant: false, layerIdx: l
+        });
+      });
+    });
+  }
+
+  generateInputDots();
+
+  const inputDisplay = document.getElementById('inputDisplay');
+  if (state.inputType === 'text') {
+    const preview = state.inputData.substring(0, 200) + (state.inputData.length > 200 ? '...' : '');
+    inputDisplay.innerHTML = `<div style="color:#00ffc8; margin-bottom:8px;">📝 Мәтін:</div>${preview}`;
+  } else {
+    inputDisplay.innerHTML = `<div style="color:#00ffc8; margin-bottom:8px;">🖼️ Сурет:</div><img src="${state.inputData}" alt="input">`;
+  }
+}
+
+function generateInputDots() {
+  state.inputDots = [];
+  state.layers[0].forEach((neuron) => {
+    state.inputDots.push({
+      x: neuron.x - 50, y: neuron.y,
+      pulse: Math.random() * Math.PI * 2, neuron
+    });
+  });
+}
+
+function startTraining() {
+  state.training = true;
+  state.startTime = performance.now();
+  state.epoch = 0; state.loss = 1.0; state.accuracy = 0;
+  state.lossHistory = [1.0];
+  markImportantPath();
+  animate();
+  setTimeout(finishTraining, CONFIG.duration);
+}
+
+function markImportantPath() {
+  const importantNeurons = new Set();
+  state.layers.forEach((layer, lIdx) => {
+    const count = lIdx === 0 ? 4 : (lIdx === state.layers.length - 1 ? layer.length : 3);
+    const indices = [];
+    while (indices.length < count) {
+      const idx = Math.floor(Math.random() * layer.length);
+      if (!indices.includes(idx)) indices.push(idx);
+    }
+    indices.forEach(i => importantNeurons.add(`${lIdx}-${i}`));
+  });
+  state.connections.forEach(conn => {
+    const fromKey = `${conn.from.layer}-${conn.from.idx}`;
+    const toKey = `${conn.to.layer}-${conn.to.idx}`;
+    conn.isImportant = importantNeurons.has(fromKey) && importantNeurons.has(toKey);
+  });
+}
+
+function animate() {
+  if (!state.training && !state.finalAnimation) { drawNetwork(true); return; }
+  const elapsed = performance.now() - state.startTime;
+  const progress = Math.min(elapsed / CONFIG.duration, 1);
+  if (state.training) { updateMetrics(progress); spawnParticles(); }
+  updateParticles();
+  updateNeurons(progress);
+  ctx.fillStyle = 'rgba(5, 8, 17, 0.15)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  drawNetwork(false);
+  drawLossChart();
+  requestAnimationFrame(animate);
+}
+
+function updateMetrics(progress) {
+  state.epoch = Math.floor(progress * 1000);
+  const baseDecay = Math.exp(-progress * 3.5);
+  const noise = (Math.sin(progress * 50) * 0.03) + (Math.random() * 0.02 - 0.01);
+  state.loss = Math.max(0.01, baseDecay + noise);
+  state.accuracy = Math.min(99.5, progress * 95 + Math.random() * 4);
+  if (state.epoch % 5 === 0) {
+    state.lossHistory.push(state.loss);
+    if (state.lossHistory.length > 100) state.lossHistory.shift();
+  }
+  document.getElementById('epochValue').textContent = state.epoch;
+  document.getElementById('lossValue').textContent = state.loss.toFixed(4);
+  document.getElementById('accuracyValue').textContent = state.accuracy.toFixed(1) + '%';
+  document.getElementById('lrValue').textContent = (0.001 + Math.random() * 0.0005).toFixed(4);
+  document.getElementById('neuronsValue').textContent = Math.floor(progress * (CONFIG.inputNeurons + CONFIG.hiddenNeurons * 2 + 1));
+  if (Math.random() < 0.1) {
+    state.layers.forEach(layer => layer.forEach(neuron => {
+      if (neuron.showWeight) {
+        neuron.weight1 = (Math.random() * 2 - 1).toFixed(2);
+        neuron.weight2 = (Math.random() * 2 - 1).toFixed(2);
+      }
+    }));
+  }
+}
+
+function spawnParticles() {
+  const spawnCount = 3 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < spawnCount; i++) {
+    const conn = state.connections[Math.floor(Math.random() * state.connections.length)];
+    const reverse = Math.random() < 0.25;
+    state.particles.push({
+      conn, progress: reverse ? 1 : 0, reverse,
+      speed: CONFIG.particleSpeed * (0.5 + Math.random() * 1.5),
+      color: getParticleColor(), size: 1.5 + Math.random() * 2
+    });
+  }
+  if (state.particles.length > 400) state.particles = state.particles.slice(-400);
+}
+
+function getParticleColor() {
+  const r = Math.random();
+  if (r < 0.5) return { r: 0, g: 255, b: 200 };
+  if (r < 0.8) return { r: 0, g: 170, b: 255 };
+  if (r < 0.93) return { r: 255, g: 80, b: 80 };
+  return { r: 180, g: 0, b: 255 };
+}
+
+function updateParticles() {
+  state.particles = state.particles.filter(p => {
+    if (p.reverse) {
+      p.progress -= p.speed;
+      if (p.progress <= 0) { p.conn.from.pulse = 1; return false; }
+    } else {
+      p.progress += p.speed;
+      if (p.progress >= 1) { p.conn.to.pulse = 1; return false; }
+    }
+    return true;
+  });
+}
+
+function updateNeurons(progress) {
+  state.layers.forEach(layer => layer.forEach(neuron => {
+    neuron.pulse *= 0.92;
+    neuron.targetActivation = 0.3 + Math.random() * 0.4 + neuron.pulse * 0.5;
+    neuron.activation += (neuron.targetActivation - neuron.activation) * 0.1;
+  }));
+  state.layers[state.layers.length - 1].forEach(n => {
+    n.activation = Math.min(1, n.activation + progress * 0.3);
+  });
+}
+
+function drawNetwork(finalState) {
+  drawInputDots();
+  state.connections.forEach(conn => drawConnection(conn, finalState));
+  state.particles.forEach(p => drawParticle(p));
+  state.layers.forEach(layer => layer.forEach(neuron => drawNeuron(neuron, finalState)));
+  if (finalState && state.finalResult) drawOutputGlow();
+}
+
+function drawInputDots() {
+  const t = performance.now() / 1000;
+  state.inputDots.forEach((dot, i) => {
+    dot.pulse += 0.05;
+    const r = 2 + Math.sin(dot.pulse) * 1.5;
+    const alpha = 0.6 + Math.sin(dot.pulse) * 0.3;
+    ctx.beginPath();
+    ctx.arc(dot.x, dot.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, 255, 200, ${alpha})`;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.strokeStyle = `rgba(0, 255, 200, ${0.2 + Math.sin(t * 2 + i) * 0.1})`;
+    ctx.lineWidth = 0.8;
+    ctx.moveTo(dot.x, dot.y);
+    ctx.lineTo(dot.neuron.x, dot.neuron.y);
+    ctx.stroke();
+  });
+}
+
+function drawConnection(conn, finalState) {
+  const { from, to } = conn;
+  if (finalState && !conn.isImportant) {
+    ctx.strokeStyle = 'rgba(50, 60, 90, 0.08)';
+    ctx.lineWidth = 0.3;
+  } else if (finalState && conn.isImportant) {
+    ctx.strokeStyle = 'rgba(0, 255, 200, 0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#00ffc8';
+    ctx.shadowBlur = 8;
+  } else {
+    const t = performance.now() / 1000;
+    const flicker = 0.3 + Math.sin(t * 5 + conn.from.idx + conn.to.idx) * 0.2;
+    const weight = conn.weight + Math.sin(t * 3 + conn.from.idx) * 0.5;
+    let color;
+    if (weight > 0.3) color = `rgba(0, 255, 200, ${flicker * 0.5})`;
+    else if (weight < -0.3) color = `rgba(255, 80, 80, ${flicker * 0.4})`;
+    else color = `rgba(100, 130, 200, ${flicker * 0.3})`;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.4 + Math.abs(weight) * 0.5;
+  }
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+}
+
+function drawParticle(p) {
+  const { from, to } = p.conn;
+  const x = from.x + (to.x - from.x) * p.progress;
+  const y = from.y + (to.y - from.y) * p.progress;
+  const c = p.color;
+  const gradient = ctx.createRadialGradient(x, y, 0, x, y, p.size * 4);
+  gradient.addColorStop(0, `rgba(${c.r}, ${c.g}, ${c.b}, 0.8)`);
+  gradient.addColorStop(0.4, `rgba(${c.r}, ${c.g}, ${c.b}, 0.3)`);
+  gradient.addColorStop(1, `rgba(${c.r}, ${c.g}, ${c.b}, 0)`);
+  ctx.beginPath();
+  ctx.arc(x, y, p.size * 4, 0, Math.PI * 2);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x, y, p.size, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(${c.r}, ${c.g}, ${c.b}, 1)`;
+  ctx.fill();
+}
+
+function drawNeuron(neuron, finalState) {
+  const baseRadius = neuron.type === 'output' ? 18 : (neuron.type === 'input' ? 6 : 5);
+  const radius = baseRadius + neuron.pulse * 4;
+  const alpha = 0.6 + neuron.activation * 0.4;
+  if (neuron.pulse > 0.1 || neuron.type === 'output' || (finalState && neuron.type === 'output')) {
+    const glowSize = neuron.type === 'output' ? radius * 3 : radius * 2;
+    const gradient = ctx.createRadialGradient(neuron.x, neuron.y, 0, neuron.x, neuron.y, glowSize);
+    const glowAlpha = neuron.type === 'output' ? 0.6 : neuron.pulse * 0.5;
+    gradient.addColorStop(0, `rgba(0, 255, 200, ${glowAlpha})`);
+    gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+    ctx.beginPath();
+    ctx.arc(neuron.x, neuron.y, glowSize, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(neuron.x, neuron.y, radius, 0, Math.PI * 2);
+  let fillColor;
+  if (neuron.type === 'output') fillColor = `rgba(0, 255, 200, ${alpha})`;
+  else if (neuron.type === 'input') fillColor = `rgba(180, 0, 255, ${alpha})`;
+  else fillColor = `rgba(100, 180, 255, ${alpha * 0.8})`;
+  ctx.fillStyle = fillColor;
+  ctx.fill();
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.3 + neuron.pulse * 0.5})`;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (neuron.showWeight && !finalState) {
+    ctx.font = '10px Consolas, monospace';
+    ctx.fillStyle = 'rgba(0, 255, 200, 0.7)';
+    ctx.textAlign = 'left';
+    ctx.fillText(`w₁=${neuron.weight1}`, neuron.x + 10, neuron.y - 5);
+    ctx.fillText(`w₂=${neuron.weight2}`, neuron.x + 10, neuron.y + 8);
+  }
+  if (neuron.type === 'output') {
+    ctx.font = 'bold 11px Consolas, monospace';
+    ctx.fillStyle = '#00ffc8';
+    ctx.textAlign = 'center';
+    ctx.fillText('OUTPUT', neuron.x, neuron.y + radius + 18);
+  }
+}
+
+function drawOutputGlow() {
+  state.layers[state.layers.length - 1].forEach(n => {
+    const t = performance.now() / 500;
+    const pulseSize = 60 + Math.sin(t) * 15;
+    const gradient = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, pulseSize);
+    gradient.addColorStop(0, 'rgba(0, 255, 200, 0.4)');
+    gradient.addColorStop(0.5, 'rgba(0, 170, 255, 0.2)');
+    gradient.addColorStop(1, 'rgba(0, 255, 200, 0)');
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, pulseSize, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  });
+}
+
+function drawLossChart() {
+  const w = lossChartCanvas.width, h = lossChartCanvas.height;
+  lossCtx.clearRect(0, 0, w, h);
+  lossCtx.strokeStyle = 'rgba(0, 255, 200, 0.1)';
+  lossCtx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = (h / 4) * i;
+    lossCtx.beginPath();
+    lossCtx.moveTo(0, y);
+    lossCtx.lineTo(w, y);
+    lossCtx.stroke();
+  }
+  if (state.lossHistory.length > 1) {
+    lossCtx.strokeStyle = '#00ffc8';
+    lossCtx.lineWidth = 2;
+    lossCtx.shadowColor = '#00ffc8';
+    lossCtx.shadowBlur = 6;
+    lossCtx.beginPath();
+    state.lossHistory.forEach((loss, i) => {
+      const x = (i / (state.lossHistory.length - 1)) * w;
+      const y = h - (loss * h * 0.9) - 5;
+      if (i === 0) lossCtx.moveTo(x, y);
+      else lossCtx.lineTo(x, y);
+    });
+    lossCtx.stroke();
+    lossCtx.shadowBlur = 0;
+  }
+}
+
+function finishTraining() {
+  state.training = false;
+  state.finalAnimation = true;
+  setTimeout(() => {
+    state.particles = [];
+    state.connections.filter(c => c.isImportant).forEach(conn => {
+      for (let i = 0; i < 3; i++) {
+        state.particles.push({
+          conn, progress: i * 0.3, reverse: false,
+          speed: CONFIG.particleSpeed * 1.5,
+          color: { r: 0, g: 255, b: 200 }, size: 2.5
+        });
+      }
+    });
+    state.startTime = performance.now();
+    requestAnimationFrame(finalAnimationLoop);
+  }, 300);
+  setTimeout(showResult, 1500);
+}
+
+function finalAnimationLoop() {
+  ctx.fillStyle = 'rgba(5, 8, 17, 0.15)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  updateParticles();
+  if (Math.random() < 0.3) {
+    const imp = state.connections.filter(c => c.isImportant);
+    if (imp.length > 0) {
+      const conn = imp[Math.floor(Math.random() * imp.length)];
+      state.particles.push({
+        conn, progress: 0, reverse: false,
+        speed: CONFIG.particleSpeed * 1.5,
+        color: { r: 0, g: 255, b: 200 }, size: 2.5
+      });
+    }
+  }
+  state.layers.forEach(layer => layer.forEach(n => { n.pulse *= 0.95; }));
+  state.layers[state.layers.length - 1].forEach(n => {
+    n.activation = 1;
+    n.pulse = 0.5 + Math.sin(performance.now() / 200) * 0.5;
+  });
+  drawNetwork(true);
+  requestAnimationFrame(finalAnimationLoop);
+}
+
+function showResult() {
+  const result = state.finalResult;
+  document.getElementById('resultText').textContent = result.label;
+  document.getElementById('resultDetail').textContent = `${result.detail} • Сенімділік: ${result.confidence.toFixed(1)}%`;
+  resultModal.classList.add('show');
+  setTimeout(() => {
+    document.getElementById('confidenceFill').style.width = result.confidence + '%';
+  }, 100);
+
+  // Талдау панелін көрсету
+  if (state.inputType === 'text' && state.textAnalysis) {
+    showTextAnalysis();
+  } else if (state.inputType === 'image' && state.predictions.length > 0) {
+    showImagePredictions();
+  }
+}
+
+function showTextAnalysis() {
+  const a = state.textAnalysis;
+  const content = document.getElementById('analysisContent');
+
+  let html = '';
+
+  // ЭМОЦИЯ
+  const sentimentClass = a.sentiment.code === 'positive' ? 'positive'
+    : a.sentiment.code === 'negative' ? 'negative' : 'neutral';
+  html += `
+    <div class="analysis-section">
+      <div class="section-title">💚 ЭМОЦИЯ</div>
+      <div class="analysis-item">
+        <span class="name">${a.sentiment.label}</span>
+        <span class="val">${a.sentiment.confidence}%</span>
+      </div>
+      <div class="mini-bar"><div class="mini-bar-fill ${sentimentClass}" style="width:${a.sentiment.confidence}%"></div></div>
+      <div style="font-size:10px; color:#8a95b8; margin-top:6px;">
+        Оң: ${a.sentiment.positiveScore} • Теріс: ${a.sentiment.negativeScore}
+      </div>
+    </div>
+  `;
+
+  // ТАҚЫРЫП
+  html += `<div class="analysis-section"><div class="section-title">📂 ТАҚЫРЫП</div>`;
+  if (a.topic.all.length > 0) {
+    a.topic.all.forEach(t => {
+      html += `
+        <div class="analysis-item">
+          <span class="name">${t.name}</span>
+          <span class="val">${t.percent}%</span>
+        </div>
+        <div class="mini-bar"><div class="mini-bar-fill" style="width:${t.percent}%"></div></div>
+      `;
+    });
+  } else {
+    html += `<div style="color:#8a95b8; font-size:11px;">Нақты тақырып анықталмады</div>`;
+  }
+  html += `</div>`;
+
+  // ТІЛ
+  html += `
+    <div class="analysis-section">
+      <div class="section-title">🌍 ТІЛ</div>
+      <div class="analysis-item">
+        <span class="name">${a.lang.lang}</span>
+        <span class="val">${a.lang.confidence}%</span>
+      </div>
+    </div>
+  `;
+
+  // СТАТИСТИКА
+  html += `
+    <div class="analysis-section">
+      <div class="section-title">📊 СТАТИСТИКА</div>
+      <div class="analysis-item"><span class="name">Сөздер:</span><span class="val">${a.complexity.words}</span></div>
+      <div class="analysis-item"><span class="name">Сөйлемдер:</span><span class="val">${a.complexity.sentences}</span></div>
+      <div class="analysis-item"><span class="name">Символдар:</span><span class="val">${a.complexity.chars}</span></div>
+      <div class="analysis-item"><span class="name">Күрделілік:</span><span class="val">${a.complexity.level}</span></div>
+    </div>
+  `;
+
+  // КІЛТ СӨЗДЕР
+  if (a.keywords.length > 0) {
+    html += `<div class="analysis-section"><div class="section-title">🔑 КІЛТ СӨЗДЕР</div><div>`;
+    a.keywords.forEach(k => {
+      html += `<span class="keyword-tag">${k.word} (${k.count})</span>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // AI EMBEDDING (USE)
+  if (a.aiEmbedding) {
+    html += `
+      <div class="analysis-section">
+        <div class="section-title">🧠 USE EMBEDDING (TensorFlow AI)</div>
+        <div class="analysis-item"><span class="name">Өлшем:</span><span class="val">${a.aiEmbedding.dimensions}D</span></div>
+        <div class="analysis-item"><span class="name">Magnitude:</span><span class="val">${a.aiEmbedding.magnitude}</span></div>
+        <div class="analysis-item"><span class="name">Variance:</span><span class="val">${a.aiEmbedding.variance}</span></div>
+      </div>
+    `;
+  }
+
+  content.innerHTML = html;
+  document.getElementById('analysisPanel').classList.add('show');
+}
+
+function showImagePredictions() {
+  const content = document.getElementById('analysisContent');
+  let html = `<div class="analysis-section"><div class="section-title">🎯 TOP БОЛЖАМДАР (AI)</div>`;
+  state.predictions.forEach(p => {
+    const percent = (p.probability * 100).toFixed(1);
+    html += `
+      <div class="analysis-item">
+        <span class="name">${p.labelKz}</span>
+        <span class="val">${percent}%</span>
+      </div>
+      <div class="mini-bar"><div class="mini-bar-fill" style="width:${percent}%"></div></div>
+    `;
+  });
+  html += `</div>`;
+  content.innerHTML = html;
+  document.getElementById('analysisPanel').classList.add('show');
+}
+
+console.log('🧠 v4: AI-нейрожелі симуляторы дайын!');
+</script>
+
+</body>
+</html>
