@@ -16,7 +16,15 @@
     width: 100vw;
     position: relative;
   }
-
+body, html {
+    /* Экраннан асып кеткен контентті төмен қарай айналдыруға рұқсат беру */
+    overflow-y: auto; 
+    /* Мобильді браузерлерде скролл бірқалыпты (плавный) болуы үшін */
+    -webkit-overflow-scrolling: touch; 
+    /* Биіктік қатып қалмауы керек */
+    height: auto; 
+    min-height: 100vh; 
+}
   body::before {
     content: '';
     position: fixed;
