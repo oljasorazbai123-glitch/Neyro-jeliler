@@ -378,15 +378,42 @@ body, html {
     text-transform: uppercase;
   }
 
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 12px;
-  }
+  @media (max-width: 768px) {
+    body {
+      overflow-y: auto !important;
+      height: auto !important;
+      min-height: 100vh;
+    }
 
-  .stat-row .label { color: #8a95b8; }
-  .stat-row .value { color: #00ffc8; font-weight: 600; font-family: 'Consolas', monospace; }
+    #page1 {
+      overflow-y: visible !important;
+      padding-bottom: 40px;
+    }
+
+    .header h1 { font-size: 28px; }
+    .input-container { 
+      flex-direction: column; 
+      gap: 15px; 
+      margin-bottom: 20px;
+    }
+    .input-card { 
+      min-width: 100%; 
+      padding: 20px; 
+    }
+    textarea, .upload-area {
+      min-height: 140px;
+    }
+    .start-btn {
+      width: 100%;
+      padding: 15px 30px;
+      font-size: 16px;
+      margin-bottom: 20px;
+      z-index: 999;
+    }
+    .stats-panel, .input-display, .predictions-panel { width: 200px; padding: 15px; }
+    .result-modal { min-width: 300px; padding: 30px 25px; }
+    .result-modal .result-text { font-size: 22px;}
+  }
 
   .loss-chart-container {
     margin-top: 15px;
